@@ -1,0 +1,81 @@
+%% matlab housekeeping
+clc;
+clear all
+
+%% get time_stamps for each frame for each video
+
+% initialize parameters
+nFiles = 13;
+nFrames = 40;
+totalvideos = 10;
+
+for i = 4:nFiles
+    if i < 10
+        % ------- change file path and name ------ %
+        rawdata(i-3) = load(strcat('C:\Users\Aouser\Documents\MATLAB\OneLightTesting\timing_test_20151208_10framedelay_noround_000',int2str(i),'.mat'), 'frame_time_stamps');
+    else
+        rawdata(i-3) = load(strcat('C:\Users\Aouser\Documents\MATLAB\OneLightTesting\timing_test_20151208_10framedelay_noround_00',int2str(i),'.mat'), 'frame_time_stamps');
+    end
+end
+       
+%% find difference in time between frame#10 and frame#11
+
+% ----- change frame number ----- %
+for j = 1:totalvideos
+    for i = 1:nFrames
+        data(i,j) = rawdata(1,j).frame_time_stamps(i,:);
+    end
+    data_difference(j)=data(11,j)-data(10,j);
+end
+
+%% read in each frame for each video
+
+% ------ change working directory ----- %
+workingDir = 'C:\Users\Aouser\Documents\MATLAB\OneLightTesting';
+mkdir(workingDir,'images')
+
+for i = 4:nFiles %started from video#4 in this dataset
+    if i < 10
+        % ----- change file path and name ----- %
+        Video(i-3) = VideoReader(strcat('C:\Users\Aouser\Documents\MATLAB\OneLightTesting\timing_test_20151208_10framedelay_noround_000',int2str(i),'.avi'));
+    else
+        Video(i-3) = VideoReader(strcat('C:\Users\Aouser\Documents\MATLAB\OneLightTesting\timing_test_20151208_10framedelay_noround_00',int2str(i),'.avi'));
+    end
+end
+
+for i = 1:totalvideos
+img = read(Video(i),11);
+totalrow = size(img, 1);
+for j=1:totalrow
+    if img(j,1)> 35 %indicates full row of stimulus
+        h = j;
+        break
+    end
+end
+proportion_dark = (h-1)/totalrow; %fraction of no stimulus in a frame
+timedelay_video(i) = data_difference(i)*proportion_dark; %time delay for each video in sec
+filename = [sprintf('%03d',i) '.jpg'];
+fullname = fullfile(workingDir,'images',filename);
+imwrite(img,fullname) % Write out to a JPEG file (img1.jpg, img2.jpg, etc.)
+end
+
+%% statistical analysis
+M = mean(timedelay_video,2);
+SD = std(timedelay_video');
+timedelay_ms = timedelay_video*1000;
+
+%% save data to an excel file
+fid = fopen('results.csv','w');
+fprintf(fid, 'Mean (msec) \n %0.8f \n\n', M);
+fprintf(fid, 'Standard Deviation \n %0.8f \n\n', SD);
+fprintf(fid, 'Time Delay for each video (sec) \n');
+fprintf(fid,'%0.8f \n',timedelay_video);
+fclose(fid);
+
+%% create a box plot to look at results
+figure(1)
+boxplot(timedelay_ms')
+xlabel('Dataset 1')
+ylabel('Time Delay (msec)')
+
+
